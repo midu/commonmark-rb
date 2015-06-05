@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+
+$:.push File.expand_path("../../lib", __FILE__)
+
+require "commonmark"
+
+markdown_body = ARGF.read
+
+puts Commonmark.parse(markdown_body)

@@ -1,3 +1,4 @@
 [submodule "vendor/CommonMark"]
 	path = vendor/CommonMark
 	url = git@github.com:jgm/CommonMark.git
+  ignore = dirty

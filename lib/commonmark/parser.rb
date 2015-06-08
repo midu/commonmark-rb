@@ -9,14 +9,18 @@
     rule(:line)       { cr | (line_body >> eol?) }
     rule(:text) { line.as(:text) }
 
-    rule(:paragraph) { (line).repeat(1).as(:paragraph) }
+    rule(:paragraph_line) { (line_body).as(:paragraph_line) >> eol? }
+
+    rule(:paragraph) { paragraph_line.repeat(1).as(:paragraph) >> (cr.repeat(1) | any.absent?) }
 
     rule(:dash) { str('-') }
     rule(:space) { match(' ') }
     rule(:tab) { match('\t').repeat(1) }
 
     rule(:hr_char) { str('-') | str('*') | str('_') }
-    rule(:hr) { space.repeat(0, 3) >> hr_char.repeat(3, nil).as(:hr) >> eol? }
+    rule(:hr_delimiter) { space }
+
+    rule(:hr) { space.repeat(0, 3) >> (hr_char >> hr_delimiter.repeat).repeat(3).as(:hr) >> eol? }
 
     rule(:unordered_list_item) { dash >> space >> (line_body).as(:li) >> eol?}
     rule(:unordered_list) { unordered_list_item.repeat(1).as(:ul) }
@@ -25,7 +29,7 @@
     rule(:code_block) { code_line.repeat(1).as(:code_block) }
 
 
-    rule(:markdown) { (unordered_list | hr | code_block | paragraph ).repeat(1) }
+    rule(:markdown) { (hr | unordered_list | code_block | paragraph ).repeat(1) }
 
     root :markdown
   end
@@ -47,13 +51,14 @@
 
     rule(hr: simple(:hr)) { "<hr />\n" }
 
-    rule(paragraph: simple(:paragraph)) { "<p>#{paragraph}</p>" }
+    rule(paragraph_line: simple(:line)) { line }
+    rule(paragraph: sequence(:paragraph_lines)) { "<p>#{paragraph_lines.join("\n")}</p>" }
   end
 
   class Parser
     def self.parse(markdown_input)
       tree = Grammar.new.parse(markdown_input)
-      # puts tree
+
       File.open('/web/parsed_markdown/tree.kikou', 'w').puts tree
       CodeblockTransform.new.apply(tree)
     end

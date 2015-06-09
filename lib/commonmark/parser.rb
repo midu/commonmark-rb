@@ -4,15 +4,13 @@
   class Grammar < Parslet::Parser
 
     rule(:cr)         { match('\n') }
-    rule(:eol?)       { cr | any.absent?  }
+    rule(:eol?)       { cr | any.absent? }
     rule(:line_body)  { (eol?.absent? >> (emphasize | any)).repeat(1) }
-    rule(:line)       { cr | (line_body >> eol?) }
-    rule(:text) { line.as(:text) }
 
+    rule(:emphasize_delimiter) { str('*') }
+    rule(:emphasize) { emphasize_delimiter >> (emphasize_delimiter.absent? >> any).repeat(1).as(:emphasize) >> emphasize_delimiter }
 
-    rule(:emphasize) { str('*') >> any.repeat.as(:emphasize) >> str('*') }
-
-    rule(:paragraph_line) { (line_body).as(:paragraph_line) >> eol? }
+    rule(:paragraph_line) { line_body.as(:paragraph_line) >> (eol?.maybe | hr) }
 
     rule(:paragraph) { paragraph_line.repeat(1).as(:paragraph) >> (cr.repeat(1) | any.absent?) }
 
@@ -57,6 +55,7 @@
     rule(hr: simple(:hr)) { "<hr />\n" }
 
     rule(emphasize: simple(:text)) { "<em>#{text}</em>" }
+    rule(paragraph_line: sequence(:line)) { line.join }
     rule(paragraph_line: simple(:line)) { line }
     rule(paragraph: sequence(:paragraph_lines)) { "<p>#{paragraph_lines.join("\n")}</p>" }
   end
@@ -64,8 +63,7 @@
   class Parser
     def self.parse(markdown_input)
       tree = Grammar.new.parse(markdown_input)
-
-      File.open('/web/parsed_markdown/tree.kikou', 'w').puts tree
+      puts tree
       CodeblockTransform.new.apply(tree)
     end
   end

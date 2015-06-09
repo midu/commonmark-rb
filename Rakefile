@@ -23,7 +23,20 @@ namespace :specs do
       'vendor/CommonMark'
     end
 
+    def self.skipped_tests
+      @skipped_tests ||= ENV.fetch('SKIP') { '' }.split(',').map(&:to_i).uniq.compact
+    end
+
+    def self.fail_fast?
+      !ENV['FF'].nil?
+    end
+
     def self.run(n)
+      if skipped_tests.include?(n)
+        print 'S'
+        return
+      end
+
       Dir.chdir(common_mark_path) do
         line = Cocaine::CommandLine.new("python3", "test/spec_tests.py --program #{bin_path} -n #{n}")
         res = nil
@@ -34,6 +47,7 @@ namespace :specs do
         rescue Cocaine::ExitStatusError => e
           print 'F'
           puts e.message
+          raise if fail_fast?
         end
       end
     end
